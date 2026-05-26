@@ -1,0 +1,36 @@
+server:
+  host: "0.0.0.0"
+  port: 8080
+  admin_token: ""
+
+credential:
+  auth_file: "./auth/credentials.json"
+
+session:
+  ttl_minutes: 30
+  max_sessions: 100
+
+lingma:
+  base_url: "https://lingma.alibabacloud.com1"
+  cosy_version: "2.11.2"
+  transport: "curl"
+  oauth_callback_addr: "127.0.0.1:37510"
+
+account:
+  routing_mode: "mixed"
+  load_balance: "round_robin"
+#  china_base_url: "https://lingma-api.tongyi.aliyun.com"
+  china_base_url: "https://lingma.alibabacloud.com"
+  international_base_url: "https://lingma-api.tongyi.aliyun.com"
+
+logging:
+  store_execution_logs: false
+
+database:
+  driver: "postgres"
+  dsn: "postgres://user_RYTz54:password_amC7Wx@47.76.189.98:5432/lingma2api?sslmode=disable"
+
+redis:
+  addr: "47.76.189.98:6379"
+  password: "redis_fQHPzE"
+  db: 0

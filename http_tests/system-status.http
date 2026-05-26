@@ -1,0 +1,34 @@
+### ============================================================
+### 系统状态管理接口
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@adminToken =
+
+### ----------------------------------------------------------
+### 系统状态
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/status
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 系统概览 (含 Token 统计、凭据状态、会话数、最近请求等)
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/overview
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 控制面板 (支持 range 参数: 24h / 7d / 30d)
+### ----------------------------------------------------------
+### 默认 24 小时
+GET {{baseUrl}}/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+### 近 7 天
+GET {{baseUrl}}/admin/dashboard?range=7d
+Authorization: Bearer {{adminToken}}
+
+### 近 30 天
+GET {{baseUrl}}/admin/dashboard?range=30d
+Authorization: Bearer {{adminToken}}

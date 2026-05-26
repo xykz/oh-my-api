@@ -1,0 +1,66 @@
+### ============================================================
+### 账户管理接口
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@adminToken =
+
+### ----------------------------------------------------------
+### 获取账户列表及 Token 统计
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/account
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 刷新账户凭据
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/account/refresh
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 测试账户连通性
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/account/test
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 启动账户引导 (OAuth) — method 可选: qrcode / browser
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/account/bootstrap
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "method": "qrcode",
+  "region": "china"
+}
+
+### ----------------------------------------------------------
+### 启动账户引导 (浏览器方式, 国际区)
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/account/bootstrap
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "method": "browser",
+  "region": "international"
+}
+
+### ----------------------------------------------------------
+### 查询引导状态 (替换为实际 session ID)
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/account/bootstrap/status?session=your-session-id
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 提交引导结果 (替换为实际 session ID)
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/account/bootstrap/submit
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "session": "your-session-id"
+}

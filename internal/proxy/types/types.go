@@ -1,0 +1,489 @@
+package types
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
+	"time"
+)
+
+const (
+	ChatPath        = "/algo/api/v2/service/pro/sse/agent_chat_generation"
+	ChatQuery       = "?FetchKeys=llm_model_result&AgentId=agent_common"
+	ModelListPath   = "/algo/api/v2/model/list"
+	ImageUploadPath = "/algo/api/v2/image/upload"
+)
+
+var (
+	ErrUnknownModel           = errors.New("unknown model")
+	ErrCredentialsUnavailable = errors.New("credentials unavailable")
+)
+
+type ToolCall struct {
+	Index    int          `json:"index"`
+	ID       string       `json:"id,omitempty"`
+	Type     string       `json:"type,omitempty"`
+	Function FunctionCall `json:"function"`
+}
+
+type FunctionCall struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
+}
+
+type Tool struct {
+	Type     string       `json:"type"`
+	Function ToolFunction `json:"function"`
+}
+
+type ToolFunction struct {
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+	Parameters  any    `json:"parameters,omitempty"`
+}
+
+type OpenAIContentPart struct {
+	Type     string                 `json:"type"`
+	Text     string                 `json:"text,omitempty"`
+	ImageURL *OpenAIContentImageURL `json:"image_url,omitempty"`
+}
+
+type OpenAIContentImageURL struct {
+	URL    string `json:"url"`
+	Detail string `json:"detail,omitempty"`
+}
+
+type Message struct {
+	Role       string              `json:"role"`
+	Content    string              `json:"content,omitempty"`
+	Parts      []OpenAIContentPart `json:"-"`
+	Name       string              `json:"name,omitempty"`
+	ToolCallID string              `json:"tool_call_id,omitempty"`
+	ToolCalls  []ToolCall          `json:"tool_calls,omitempty"`
+}
+
+type CanonicalProtocol string
+
+const (
+	CanonicalProtocolOpenAI    CanonicalProtocol = "openai"
+	CanonicalProtocolAnthropic CanonicalProtocol = "anthropic"
+	CanonicalProtocolResponse  CanonicalProtocol = "openai_response"
+)
+
+type CanonicalBlockType string
+
+const (
+	CanonicalBlockText       CanonicalBlockType = "text"
+	CanonicalBlockReasoning  CanonicalBlockType = "reasoning"
+	CanonicalBlockToolCall   CanonicalBlockType = "tool_call"
+	CanonicalBlockToolResult CanonicalBlockType = "tool_result"
+	CanonicalBlockImage      CanonicalBlockType = "image"
+	CanonicalBlockDocument   CanonicalBlockType = "document"
+)
+
+type CanonicalToolCall struct {
+	ID        string `json:"id,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Arguments string `json:"arguments,omitempty"`
+}
+
+type CanonicalToolDefinition struct {
+	Type        string          `json:"type,omitempty"`
+	Name        string          `json:"name,omitempty"`
+	Description string          `json:"description,omitempty"`
+	Parameters  json.RawMessage `json:"parameters,omitempty"`
+}
+
+type CanonicalToolResult struct {
+	ToolCallID string `json:"tool_call_id,omitempty"`
+	Content    string `json:"content,omitempty"`
+}
+
+type CanonicalContentBlock struct {
+	Type       CanonicalBlockType   `json:"type"`
+	Text       string               `json:"text,omitempty"`
+	Data       json.RawMessage      `json:"data,omitempty"`
+	ToolCall   *CanonicalToolCall   `json:"tool_call,omitempty"`
+	ToolResult *CanonicalToolResult `json:"tool_result,omitempty"`
+	Metadata   map[string]any       `json:"metadata,omitempty"`
+}
+
+type CanonicalTurn struct {
+	Role   string                  `json:"role"`
+	Name   string                  `json:"name,omitempty"`
+	Blocks []CanonicalContentBlock `json:"blocks,omitempty"`
+}
+
+type CanonicalRequest struct {
+	SchemaVersion int                       `json:"schema_version"`
+	Protocol      CanonicalProtocol         `json:"protocol"`
+	Model         string                    `json:"model"`
+	Stream        bool                      `json:"stream"`
+	Temperature   *float64                  `json:"temperature,omitempty"`
+	Tools         []CanonicalToolDefinition `json:"tools,omitempty"`
+	ToolChoice    any                       `json:"tool_choice,omitempty"`
+	HasTools      bool                      `json:"has_tools"`
+	HasReasoning  bool                      `json:"has_reasoning"`
+	SessionID     string                    `json:"session_id,omitempty"`
+	Metadata      map[string]any            `json:"metadata,omitempty"`
+	Turns         []CanonicalTurn           `json:"turns"`
+}
+
+type CanonicalSessionSnapshot struct {
+	SchemaVersion   int               `json:"schema_version"`
+	SessionID       string            `json:"session_id"`
+	IngressProtocol CanonicalProtocol `json:"ingress_protocol,omitempty"`
+	Turns           []CanonicalTurn   `json:"turns,omitempty"`
+	UpdatedAt       time.Time         `json:"updated_at"`
+}
+
+type CanonicalExecutionSidecar struct {
+	SchemaVersion int            `json:"schema_version"`
+	RawSSELines   []string       `json:"raw_sse_lines,omitempty"`
+	TTFTMs        int            `json:"ttft_ms,omitempty"`
+	Metadata      map[string]any `json:"metadata,omitempty"`
+}
+
+type CanonicalExecutionRecord struct {
+	SchemaVersion     int                        `json:"schema_version"`
+	IngressProtocol   CanonicalProtocol          `json:"ingress_protocol"`
+	IngressEndpoint   string                     `json:"ingress_endpoint"`
+	PrePolicyRequest  CanonicalRequest           `json:"pre_policy_request"`
+	PostPolicyRequest CanonicalRequest           `json:"post_policy_request"`
+	Session           *CanonicalSessionSnapshot  `json:"session,omitempty"`
+	SouthboundRequest string                     `json:"southbound_request,omitempty"`
+	Sidecar           *CanonicalExecutionSidecar `json:"sidecar,omitempty"`
+	CreatedAt         time.Time                  `json:"created_at"`
+}
+
+type ExtraBody struct {
+	SessionID string `json:"session_id"`
+}
+
+type OpenAIChatRequest struct {
+	Model       string    `json:"model"`
+	Messages    []Message `json:"messages"`
+	Stream      bool      `json:"stream"`
+	Temperature *float64  `json:"temperature,omitempty"`
+	ExtraBody   ExtraBody `json:"extra_body,omitempty"`
+	Tools       []Tool    `json:"tools,omitempty"`
+	ToolChoice  any       `json:"tool_choice,omitempty"`
+	Reasoning   bool      `json:"-"`
+}
+
+type OpenAIModel struct {
+	ID      string `json:"id"`
+	Object  string `json:"object"`
+	OwnedBy string `json:"owned_by"`
+}
+
+type OpenAIModelsResponse struct {
+	Object string        `json:"object"`
+	Data   []OpenAIModel `json:"data"`
+}
+
+type CredentialSnapshot struct {
+	CosyKey         string    `json:"cosy_key"`
+	EncryptUserInfo string    `json:"encrypt_user_info"`
+	UserID          string    `json:"user_id"`
+	MachineID       string    `json:"machine_id"`
+	Source          string    `json:"source"`
+	LoadedAt        time.Time `json:"loaded_at"`
+	TokenExpireTime int64     `json:"token_expire_time"`
+}
+
+type AccountRegion string
+
+const (
+	AccountRegionChina         AccountRegion = "china"
+	AccountRegionInternational AccountRegion = "international"
+)
+
+type AccountSnapshot struct {
+	ID                string        `json:"id"`
+	Label             string        `json:"label,omitempty"`
+	Region            AccountRegion `json:"region"`
+	Enabled           bool          `json:"enabled"`
+	CosyKey           string        `json:"cosy_key"`
+	EncryptUserInfo   string        `json:"encrypt_user_info"`
+	UserID            string        `json:"user_id"`
+	MachineID         string        `json:"machine_id"`
+	AccessToken       string        `json:"access_token,omitempty"`
+	RefreshToken      string        `json:"refresh_token,omitempty"`
+	Source            string        `json:"source"`
+	LingmaVersionHint string        `json:"lingma_version_hint,omitempty"`
+	ObtainedAt        string        `json:"obtained_at,omitempty"`
+	UpdatedAt         string        `json:"updated_at,omitempty"`
+	TokenExpireTime   int64         `json:"token_expire_time"`
+	LoadedAt          time.Time     `json:"loaded_at"`
+}
+
+type AccountSummary struct {
+	ID                string        `json:"id"`
+	Label             string        `json:"label,omitempty"`
+	Region            AccountRegion `json:"region"`
+	Enabled           bool          `json:"enabled"`
+	UserID            string        `json:"user_id,omitempty"`
+	MachineID         string        `json:"machine_id,omitempty"`
+	Source            string        `json:"source"`
+	LingmaVersionHint string        `json:"lingma_version_hint,omitempty"`
+	ObtainedAt        string        `json:"obtained_at,omitempty"`
+	UpdatedAt         string        `json:"updated_at,omitempty"`
+	TokenExpireTime   int64         `json:"token_expire_time"`
+	LoadedAt          time.Time     `json:"loaded_at"`
+	HasCosyKey        bool          `json:"has_cosy_key"`
+	HasEncryptInfo    bool          `json:"has_encrypt_info"`
+	HasAccessToken    bool          `json:"has_access_token"`
+	HasRefreshToken   bool          `json:"has_refresh_token"`
+	TokenExpired      bool          `json:"token_expired"`
+}
+
+func (s CredentialSnapshot) IsTokenExpired(graceMargin time.Duration) bool {
+	if s.TokenExpireTime == 0 {
+		return false
+	}
+	return time.Now().Add(graceMargin).UnixMilli() > s.TokenExpireTime
+}
+
+// ── AccountSnapshot methods ─────────────────────────────────────
+
+func (a AccountSnapshot) IsTokenExpired(grace time.Duration) bool {
+	if a.TokenExpireTime == 0 {
+		return false
+	}
+	return time.Now().Add(grace).UnixMilli() > a.TokenExpireTime
+}
+
+func (a AccountSnapshot) ToCredentialSnapshot() CredentialSnapshot {
+	return CredentialSnapshot{
+		CosyKey:         a.CosyKey,
+		EncryptUserInfo: a.EncryptUserInfo,
+		UserID:          a.UserID,
+		MachineID:       a.MachineID,
+		Source:          a.Source,
+		LoadedAt:        a.LoadedAt,
+		TokenExpireTime: a.TokenExpireTime,
+	}
+}
+
+func (a AccountSnapshot) ToStoredAccount() StoredCredentialAccount {
+	return StoredCredentialAccount{
+		ID:                a.ID,
+		Label:             a.Label,
+		Region:            a.Region,
+		Enabled:           a.Enabled,
+		Source:            a.Source,
+		LingmaVersionHint: a.LingmaVersionHint,
+		ObtainedAt:        a.ObtainedAt,
+		UpdatedAt:         a.UpdatedAt,
+		TokenExpireTime:   formatExpireTimeVal(a.TokenExpireTime),
+		Auth: StoredAuthFields{
+			CosyKey:         a.CosyKey,
+			EncryptUserInfo: a.EncryptUserInfo,
+			UserID:          a.UserID,
+			MachineID:       a.MachineID,
+			AccessToken:     a.AccessToken,
+		},
+		OAuth: StoredOAuthFields{
+			AccessToken:  a.AccessToken,
+			RefreshToken: a.RefreshToken,
+		},
+	}
+}
+
+func (a AccountSnapshot) Summary(grace time.Duration) AccountSummary {
+	return AccountSummary{
+		ID:                a.ID,
+		Label:             a.Label,
+		Region:            a.Region,
+		Enabled:           a.Enabled,
+		UserID:            a.UserID,
+		MachineID:         a.MachineID,
+		Source:            a.Source,
+		LingmaVersionHint: a.LingmaVersionHint,
+		ObtainedAt:        a.ObtainedAt,
+		UpdatedAt:         a.UpdatedAt,
+		TokenExpireTime:   a.TokenExpireTime,
+		LoadedAt:          a.LoadedAt,
+		HasCosyKey:        a.CosyKey != "",
+		HasEncryptInfo:    a.EncryptUserInfo != "",
+		HasAccessToken:    a.AccessToken != "",
+		HasRefreshToken:   a.RefreshToken != "",
+		TokenExpired:      a.IsTokenExpired(grace),
+	}
+}
+
+func formatExpireTimeVal(expireTime int64) string {
+	if expireTime <= 0 {
+		return ""
+	}
+	return strconv.FormatInt(expireTime, 10)
+}
+
+type StoredCredentialFile struct {
+	SchemaVersion     int                       `json:"schema_version"`
+	Source            string                    `json:"source"`
+	LingmaVersionHint string                    `json:"lingma_version_hint,omitempty"`
+	ObtainedAt        string                    `json:"obtained_at,omitempty"`
+	UpdatedAt         string                    `json:"updated_at,omitempty"`
+	TokenExpireTime   string                    `json:"token_expire_time,omitempty"`
+	Auth              StoredAuthFields          `json:"auth"`
+	OAuth             StoredOAuthFields         `json:"oauth,omitempty"`
+	Accounts          []StoredCredentialAccount `json:"accounts,omitempty"`
+}
+
+type StoredCredentialAccount struct {
+	ID                string            `json:"id,omitempty"`
+	Label             string            `json:"label,omitempty"`
+	Region            AccountRegion     `json:"region"`
+	Enabled           bool              `json:"enabled"`
+	Source            string            `json:"source,omitempty"`
+	LingmaVersionHint string            `json:"lingma_version_hint,omitempty"`
+	ObtainedAt        string            `json:"obtained_at,omitempty"`
+	UpdatedAt         string            `json:"updated_at,omitempty"`
+	TokenExpireTime   string            `json:"token_expire_time,omitempty"`
+	Auth              StoredAuthFields  `json:"auth"`
+	OAuth             StoredOAuthFields `json:"oauth,omitempty"`
+}
+
+type StoredAuthFields struct {
+	CosyKey         string `json:"cosy_key"`
+	EncryptUserInfo string `json:"encrypt_user_info"`
+	UserID          string `json:"user_id"`
+	MachineID       string `json:"machine_id"`
+	AccessToken     string `json:"access_token,omitempty"`
+}
+
+type StoredOAuthFields struct {
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+}
+
+type CredentialStatus struct {
+	Loaded         bool      `json:"loaded"`
+	HasCredentials bool      `json:"has_credentials"`
+	Source         string    `json:"source"`
+	LoadedAt       time.Time `json:"loaded_at"`
+	TokenExpired   bool      `json:"token_expired"`
+}
+
+type StoredMetaInfo struct {
+	SchemaVersion     int    `json:"schema_version"`
+	Source            string `json:"source"`
+	LingmaVersionHint string `json:"lingma_version_hint"`
+	ObtainedAt        string `json:"obtained_at"`
+	UpdatedAt         string `json:"updated_at"`
+	TokenExpireTime   string `json:"token_expire_time"`
+}
+
+type SessionState struct {
+	ID           string          `json:"id"`
+	Messages     []Message       `json:"messages,omitempty"`
+	Turns        []CanonicalTurn `json:"turns,omitempty"`
+	MessageCount int             `json:"message_count"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+}
+
+type ModelStatus struct {
+	FetchedAt time.Time `json:"fetched_at"`
+	Cached    bool      `json:"cached"`
+	Count     int       `json:"count"`
+	LastError string    `json:"last_error,omitempty"`
+}
+
+type RemoteModel struct {
+	Key         string `json:"key"`
+	DisplayName string `json:"display_name"`
+	Model       string `json:"model"`
+	Enable      bool   `json:"enable"`
+}
+
+type RemoteChatRequest struct {
+	Path      string
+	Query     string
+	BodyJSON  string
+	RequestID string
+	ModelKey  string
+	Stream    bool
+}
+
+type SSEUsage struct {
+	PromptTokens     int
+	CompletionTokens int
+	TotalTokens      int
+}
+
+type SSEEvent struct {
+	Content          string
+	ToolCalls        []ToolCall
+	ReasoningContent string
+	Done             bool
+	Usage            *SSEUsage
+}
+
+type UpstreamHTTPError struct {
+	StatusCode int
+	Body       string
+}
+
+func (err *UpstreamHTTPError) Error() string {
+	return fmt.Sprintf("upstream http status %d: %s", err.StatusCode, err.Body)
+}
+
+type ImageUploader interface {
+	UploadImage(ctx context.Context, credential CredentialSnapshot, imageURI string) (cdnURL string, err error)
+}
+
+type ImageUploadResponse struct {
+	Data struct {
+		Success   bool   `json:"Success"`
+		ImageUrl  string `json:"ImageUrl"`
+		RequestId string `json:"RequestId"`
+	} `json:"Data"`
+}
+
+type ImageUploadRequest struct {
+	ImageUri  string `json:"ImageUri"`
+	RequestId string `json:"RequestId"`
+}
+
+func DefaultAliases() map[string]string {
+	return map[string]string{
+		"qwen3-coder":         "dashscope_qwen3_coder",
+		"qwen3-coder-default": "dashscope_qwen3_coder_default",
+		"qwen-plus-thinking":  "dashscope_qwen_plus_20250428_thinking",
+		"qwen-max":            "dashscope_qwen_max_latest",
+		"auto":                "",
+	}
+}
+
+func NewUUID() string {
+	var data [16]byte
+	if _, err := rand.Read(data[:]); err != nil {
+		return fmt.Sprintf("fallback-%d", time.Now().UnixNano())
+	}
+	data[6] = (data[6] & 0x0f) | 0x40
+	data[8] = (data[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", data[0:4], data[4:6], data[6:8], data[8:10], data[10:16])
+}
+
+func NewHexID() string {
+	var data [16]byte
+	if _, err := rand.Read(data[:]); err != nil {
+		return fmt.Sprintf("fallback%x", time.Now().UnixNano())
+	}
+	return hex.EncodeToString(data[:])
+}
+
+func CloneMessages(messages []Message) []Message {
+	if len(messages) == 0 {
+		return nil
+	}
+	cloned := make([]Message, len(messages))
+	copy(cloned, messages)
+	return cloned
+}

@@ -1,0 +1,29 @@
+<h2>Implementation Approach Options</h2>
+<p class="subtitle">All options use one credential JSON with accounts[], routing_mode in config, and account-level average balancing.</p>
+
+<div class="options">
+  <div class="option" data-choice="adapter-first" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Adapter-First Core Refactor</h3>
+      <p>Create account pool + load balancer + region adapters first. Chat, models, image upload, admin account UI all move onto the same abstractions.</p>
+      <p><strong>Best for correctness.</strong> More files touched, but cleanest boundary for China vs International API differences.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="compat-layer" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Compatibility Layer</h3>
+      <p>Keep most current services intact, wrap Current() so it returns a selected account. Add international handling only where needed.</p>
+      <p><strong>Fastest path.</strong> Lower initial churn, but region differences may leak through existing China-specific paths.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="two-phase" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Two-Phase Rollout</h3>
+      <p>Phase 1: multi-account China-only with routing modes and UI. Phase 2: international adapter and login flow.</p>
+      <p><strong>Lowest risk per step.</strong> But the first phase would not satisfy the full international goal immediately.</p>
+    </div>
+  </div>
+</div>

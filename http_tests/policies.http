@@ -1,0 +1,77 @@
+### ============================================================
+### 策略管理接口
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@adminToken =
+
+### ----------------------------------------------------------
+### 获取策略列表
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/policies
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 创建策略
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/policies
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "test-policy",
+  "description": "A test policy for development",
+  "enabled": true,
+  "priority": 10,
+  "match_json": {
+    "requested_model": "gpt-4"
+  },
+  "actions_json": {
+    "rewrite_model": "dashscope_qwen3_coder"
+  }
+}
+
+### ----------------------------------------------------------
+### 更新策略 (替换 {policyId} 为实际 ID, 如 1)
+### ----------------------------------------------------------
+PUT {{baseUrl}}/admin/policies/{{policyId}}
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "name": "test-policy-updated",
+  "description": "Updated test policy",
+  "enabled": true,
+  "priority": 5,
+  "match_json": {
+    "requested_model": "gpt-4"
+  },
+  "actions_json": {
+    "rewrite_model": "dashscope_qwen3_coder"
+  }
+}
+
+### ----------------------------------------------------------
+### 删除策略 (替换 {policyId} 为实际 ID)
+### ----------------------------------------------------------
+DELETE {{baseUrl}}/admin/policies/{{policyId}}
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 测试策略匹配
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/policies/test
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "protocol": "openai",
+  "requested_model": "gpt-4",
+  "stream": true,
+  "tools": false,
+  "reasoning": false,
+  "session_id": "test-session",
+  "client_name": "test-client",
+  "ingress_tag": ""
+}

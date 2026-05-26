@@ -1,0 +1,27 @@
+### ============================================================
+### 设置管理接口
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@adminToken =
+
+### ----------------------------------------------------------
+### 获取所有设置
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/settings
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 更新设置
+### ----------------------------------------------------------
+PUT {{baseUrl}}/admin/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "storage_mode": "full",
+  "truncate_length": "102400",
+  "retention_days": "30",
+  "store_sidecar_json": "false"
+}

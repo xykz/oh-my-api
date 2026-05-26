@@ -1,0 +1,52 @@
+<h2>Lingma 双区域多账号改造范围</h2>
+<p class="subtitle">当前代码是单账号、中国版 COSY API。目标是把账号池、区域适配和负载均衡拆开，让请求先选账号，再走对应区域的 API。</p>
+
+<div class="mockup">
+  <div class="mockup-header">Current: single credential path</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center">
+      <div class="placeholder">OpenAI / Anthropic Request</div>
+      <div class="placeholder">CredentialManager<br><strong>one credentials.json</strong></div>
+      <div class="placeholder">China Lingma<br>COSY headers + /algo/api/v2</div>
+    </div>
+  </div>
+</div>
+
+<div class="mockup">
+  <div class="mockup-header">Target: accounts, regions, balancing</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1.1fr 1.1fr 1.2fr 1.1fr;gap:12px;align-items:stretch">
+      <div class="placeholder">Request<br><span style="font-size:12px;color:#6b7280">model, stream, vision, metadata</span></div>
+      <div class="placeholder">Account Pool<br><span style="font-size:12px;color:#6b7280">2 China + 3 International</span></div>
+      <div class="placeholder">Load Balancer<br><span style="font-size:12px;color:#6b7280">round-robin, random, failover</span></div>
+      <div class="placeholder">Region Adapter<br><span style="font-size:12px;color:#6b7280">China COSY / International API</span></div>
+    </div>
+  </div>
+</div>
+
+<h3>First design decision</h3>
+<p class="subtitle">Which account selection model should the first implementation target?</p>
+
+<div class="options">
+  <div class="option" data-choice="pool-wide" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>One Global Pool</h3>
+      <p>Every eligible China and International account participates in one load-balanced pool. Region adapter is chosen after account selection.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="region-aware" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Region-Aware Pools</h3>
+      <p>Accounts are grouped by region. Requests can use a default region, explicit region, or model-to-region mapping before balancing inside that group.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="fallback" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Primary With Fallback</h3>
+      <p>Prefer one region or account set, then fall back to the other only on configured errors or quota exhaustion.</p>
+    </div>
+  </div>
+</div>

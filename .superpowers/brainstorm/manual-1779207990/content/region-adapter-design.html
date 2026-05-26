@@ -1,0 +1,31 @@
+<h2>Region Adapter Design</h2>
+<p class="subtitle">Public evidence confirms domains better than protocol details. The design should keep host configuration separate from request signing and payload translation.</p>
+
+<div class="mockup">
+  <div class="mockup-header">Proposed boundary</div>
+  <div class="mockup-body">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:stretch">
+      <div class="placeholder">Account<br><span style="font-size:12px;color:#6b7280">id, label, region, enabled, credential</span></div>
+      <div class="placeholder">Route Config<br><span style="font-size:12px;color:#6b7280">china_only / international_only / mixed<br>round_robin account-average</span></div>
+      <div class="placeholder">Region Adapter<br><span style="font-size:12px;color:#6b7280">base_url + auth headers + endpoints + body mapper</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="china" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>China Adapter</h3>
+      <p>Known current implementation: COSY signed headers, /algo/api/v2/model/list, /algo/api/v2/service/pro/sse/agent_chat_generation, image upload.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="international" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>International Adapter</h3>
+      <p>Configurable default base_url api.lingma.ai. Protocol kept behind the same interface so real endpoint/header differences can be added without touching balancer/UI.</p>
+    </div>
+  </div>
+</div>
+
+<h3>Spec stance</h3>
+<p class="subtitle">We should implement the multi-account and adapter framework with China adapter fully wired, and make International adapter configurable but test-driven from whatever protocol evidence we can capture next.</p>

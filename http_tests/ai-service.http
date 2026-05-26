@@ -1,0 +1,135 @@
+### ============================================================
+### AI 服务接口 — OpenAI / Anthropic 兼容
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@authToken = sk-your-token-here
+@responseFileOutputDir = A:/Temp/jb/fuckLingma
+@modelId = dashscope_qwen3_coder
+
+### 获取模型列表
+GET {{baseUrl}}/v1/models
+Authorization: Bearer {{authToken}}
+
+>> {{responseFileOutputDir}}/models-{{$timestamp}}.json
+
+### 聊天补全 (OpenAI Chat Completions, streaming)
+POST {{baseUrl}}/v1/chat/completions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "model": "{{modelId}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, introduce yourself briefly."
+    }
+  ],
+  "stream": true
+}
+>> {{responseFileOutputDir}}/chat-completion-stream-{{$timestamp}}.txt
+
+### 聊天补全 (OpenAI Chat Completions, flattened)
+POST {{baseUrl}}/v1/chat/completions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "model": "{{modelId}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, introduce yourself briefly."
+    }
+  ],
+  "stream": false
+}
+>> {{responseFileOutputDir}}/chat-completion-flat-{{$timestamp}}.json
+
+
+### 聊天补全 (multi-turn, with system prompt, streaming)
+POST {{baseUrl}}/v1/chat/completions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "model": "{{modelId}}",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful coding assistant."
+    },
+    {
+      "role": "user",
+      "content": "Write a Go function that reverses a string."
+    },
+    {
+      "role": "assistant",
+      "content": "Here's a simple Go function:\n\n```go\nfunc reverse(s string) string {\n    runes := []rune(s)\n    for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {\n        runes[i], runes[j] = runes[j], runes[i]\n    }\n    return string(runes)\n}\n```"
+    },
+    {
+      "role": "user",
+      "content": "Can you optimize it?"
+    }
+  ],
+  "stream": true
+}
+>> {{responseFileOutputDir}}/chat-completion-multi-turn-with-system-prompt-and-streaming-{{$timestamp}}.txt
+
+
+### Anthropic Messages (streaming)
+POST {{baseUrl}}/v1/messages
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "model": "{{modelId}}",
+  "max_tokens": 1024,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, introduce yourself briefly."
+    }
+  ],
+  "stream": true
+}
+>> {{responseFileOutputDir}}/anthropic-messages-stream-{{$timestamp}}.txt
+
+### Anthropic Messages (flattened)
+POST {{baseUrl}}/v1/messages
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+    "model": "{{modelId}}",
+  "max_tokens": 1024,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, introduce yourself briefly."
+    }
+  ],
+  "stream": false
+}
+>> {{responseFileOutputDir}}/anthropic-messages-flat-{{$timestamp}}.json
+
+
+### Anthropic Messages (带 system prompt)
+POST {{baseUrl}}/v1/messages
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "model": "{{modelId}}",
+  "max_tokens": 128000,
+  "system": "You are a helpful coding assistant.",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain what is a goroutine in Go."
+    }
+  ],
+  "stream": true
+}

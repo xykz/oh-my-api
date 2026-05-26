@@ -1,0 +1,101 @@
+### ============================================================
+### 日志管理接口
+### ============================================================
+
+### 变量定义
+@baseUrl = http://localhost:8080
+@adminToken =
+
+### ----------------------------------------------------------
+### 日志列表 (支持分页和筛选)
+### ----------------------------------------------------------
+### 默认分页
+GET {{baseUrl}}/admin/logs
+Authorization: Bearer {{adminToken}}
+
+### 带分页参数
+GET {{baseUrl}}/admin/logs?page=1&limit=20
+Authorization: Bearer {{adminToken}}
+
+### 按状态筛选
+GET {{baseUrl}}/admin/logs?page=1&limit=20&status=success
+Authorization: Bearer {{adminToken}}
+
+### 按模型筛选
+GET {{baseUrl}}/admin/logs?page=1&limit=20&model=dashscope_qwen3_coder
+Authorization: Bearer {{adminToken}}
+
+### 按时间范围筛选
+GET {{baseUrl}}/admin/logs?page=1&limit=20&from=2026-05-01T00:00:00Z&to=2026-05-25T23:59:59Z
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 获取单条日志详情 (替换 {logId} 为实际 ID)
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/logs/{{logId}}
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 重放请求 (替换 {logId} 为实际 ID)
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/logs/{{logId}}/replay
+Authorization: Bearer {{adminToken}}
+
+### 重放请求 — 指定模式 (mode: exact / historical)
+POST {{baseUrl}}/admin/logs/{{logId}}/replay?mode=exact
+Authorization: Bearer {{adminToken}}
+
+### 重放请求 — 自定义请求体
+POST {{baseUrl}}/admin/logs/{{logId}}/replay
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "model": "dashscope_qwen3_coder",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ],
+  "stream": true
+}
+
+### ----------------------------------------------------------
+### 清理过期日志 (根据 retention_days 设置)
+### ----------------------------------------------------------
+POST {{baseUrl}}/admin/logs/cleanup
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 导出日志 (JSON 格式)
+### ----------------------------------------------------------
+GET {{baseUrl}}/admin/logs/export
+Authorization: Bearer {{adminToken}}
+
+### 导出日志 — 筛选 + JSON
+GET {{baseUrl}}/admin/logs/export?status=success&model=dashscope_qwen3_coder
+Authorization: Bearer {{adminToken}}
+
+### 导出日志 — CSV 格式
+GET {{baseUrl}}/admin/logs/export?format=csv
+Authorization: Bearer {{adminToken}}
+
+### 导出日志 — 按时间范围 + CSV
+GET {{baseUrl}}/admin/logs/export?format=csv&from=2026-05-01T00:00:00Z&to=2026-05-25T23:59:59Z
+Authorization: Bearer {{adminToken}}
+
+### ----------------------------------------------------------
+### 导出统计数据
+### ----------------------------------------------------------
+### 默认 24 小时
+GET {{baseUrl}}/admin/stats/export
+Authorization: Bearer {{adminToken}}
+
+### 近 7 天
+GET {{baseUrl}}/admin/stats/export?range=7d
+Authorization: Bearer {{adminToken}}
+
+### 近 30 天
+GET {{baseUrl}}/admin/stats/export?range=30d
+Authorization: Bearer {{adminToken}}
