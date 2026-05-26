@@ -90,13 +90,15 @@ func main() {
 
 	// Initialize Redis for token stats
 	var tokenStats *redis.TokenStats
+	var requestStats *redis.RequestStats
 	redisClient, err := redis.NewClient(cfg.Redis)
 	if err != nil {
-		log.Printf("WARNING: Redis unavailable, token stats disabled: %v", err)
+		log.Printf("WARNING: Redis unavailable, stats disabled: %v", err)
 	} else {
 		tokenStats = redis.NewTokenStats(redisClient)
+		requestStats = redis.NewRequestStats(redisClient)
 		defer redisClient.Close()
-		log.Printf("Redis connected for token stats")
+		log.Printf("Redis connected for stats")
 	}
 
 	// Start background log cleanup goroutine
@@ -177,6 +179,7 @@ func main() {
 		Now:                time.Now,
 		FrontendFS:         frontendDist,
 		TokenStats:         tokenStats,
+		RequestStats:       requestStats,
 	}, store, bootstrapMgr)
 
 	server := &http.Server{

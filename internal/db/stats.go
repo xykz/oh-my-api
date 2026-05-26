@@ -33,7 +33,7 @@ type ModelDistPoint struct {
 	Count int    `json:"count"`
 }
 
-func rangeToHours(rangeStr string) int {
+func RangeToHours(rangeStr string) int {
 	switch rangeStr {
 	case "1h":
 		return 1
@@ -92,7 +92,7 @@ func (s *Store) timeGroupExpr(gran, col string) string {
 }
 
 func (s *Store) GetDashboardData(ctx context.Context, rangeStr string) (DashboardData, error) {
-	hours := rangeToHours(rangeStr)
+	hours := RangeToHours(rangeStr)
 	cutoff := time.Now().Add(-time.Duration(hours) * time.Hour)
 	gran := granularityForRange(hours)
 

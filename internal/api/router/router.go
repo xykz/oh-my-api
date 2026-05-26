@@ -28,6 +28,7 @@ func New(deps model.Dependencies, store *db.Store, bootstrap *handler.BootstrapM
 		StoreExecutionLogs: deps.StoreExecutionLogs,
 		Bootstrap:          bootstrap,
 		TokenStats:         deps.TokenStats,
+		RequestStats:       deps.RequestStats,
 	}
 
 	mux := http.NewServeMux()

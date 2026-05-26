@@ -1,31 +1,19 @@
 # lingma2api
 
-`lingma2api` 是一个最小 OpenAI 兼容代理，对外暴露 `/v1/models`、`/v1/chat/completions` 与 `/v1/messages`，对内复用 Lingma 远端 HTTP/SSE 契约。
+`lingma2api` 是一个最小 OpenAI 兼容代理，对外暴露 `/v1/models`、`/v1/chat/completions`、`/v1/responses` 与 `/v1/messages`，对内复用 Lingma 远端 HTTP/SSE 契约。
 
-## 一键启动
-
-仓库根目录提供跨平台启动脚本，前提：本机已安装 `go`、`node`、`npm`。
-
-### 生产模式（构建并运行）
-
-会构建前端、把 `frontend-dist/` 嵌入 Go 二进制后启动单进程服务。
-
-```powershell
-# Windows (PowerShell)
-.\start.ps1
-```
+## 启动
 
 ```bash
-# Linux / macOS
-chmod +x ./start.sh
-./start.sh
+go run . -config ./config.yaml
 ```
 
 启动后访问：
 
 - 控制台：`http://<server>:8080`
-- OpenAI：`http://<server>:8080/v1`
-- Anthropic：`http://<server>:8080/v1/messages`
+- OpenAI Chat Completions：`http://<server>:8080/v1/chat/completions`
+- OpenAI Responses：`http://<server>:8080/v1/responses`
+- Anthropic Messages：`http://<server>:8080/v1/messages`
 
 默认配置会监听 `0.0.0.0:8080`，适合服务器部署。
 
@@ -46,6 +34,7 @@ chmod +x ./dev.sh
 
 - `GET /v1/models`
 - `POST /v1/chat/completions`
+- `POST /v1/responses`
 - `POST /v1/messages`
 - `stream=true` 与 `stream=false`
 - `GET /admin/status`
@@ -111,12 +100,6 @@ lingma:
 - `auth.encrypt_user_info`
 - `auth.user_id`
 - `auth.machine_id`
-
-## 启动
-
-```bash
-go run . -config ./config.yaml
-```
 
 ## 请求示例
 

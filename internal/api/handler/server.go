@@ -14,4 +14,5 @@ type Server struct {
 	StoreExecutionLogs bool
 	Bootstrap          *BootstrapManager
 	TokenStats         *redis.TokenStats
+	RequestStats       *redis.RequestStats
 }

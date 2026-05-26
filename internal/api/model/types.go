@@ -94,6 +94,7 @@ type Dependencies struct {
 	Now                func() time.Time
 	FrontendFS         embed.FS
 	TokenStats         *redis.TokenStats
+	RequestStats       *redis.RequestStats
 }
 
 // ── OpenAI response types ────────────────────────────────────────

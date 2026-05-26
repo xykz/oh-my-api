@@ -14,6 +14,47 @@ Repository instructions for agentic coding assistants working in this project.
 - Runtime config: `config.yaml`
 - Local credentials path is configured by `credential.auth_file`; do not commit real credentials.
 
+## Key Data Flows
+
+### Authentication Flow
+1. User initiates login via `/admin/account/bootstrap`
+2. Lingma provides auth/token through an OAuth-style callback (complex URL parsing in `internal/auth`)
+3. Credentials are derived locally via Lingma binary (`internal/auth/credential_derive.go`) or remotely
+4. Resulting credentials are stored in `credential.auth_file` (default `./auth/credentials.json`)
+
+### API Request Flow
+1. OpenAI-format request received (e.g. `/v1/chat/completions`)
+2. Proxy layer (`internal/proxy`) translates request to Lingma's internal API format
+3. Translated request is forwarded to Lingma
+4. Streaming SSE responses are parsed and translated back to OpenAI format before returning to the client
+
+### Credential Refresh
+1. `CredentialManager` (`internal/proxy/credentials.go`) monitors token expiration (5-minute grace period before expiry)
+2. Multiple refresh strategies are available: WebSocket (`WSRefresher`) and remote (`MultiRefresher`) in `internal/auth/refresh.go`
+3. Strategy pattern enables pluggable refresh mechanisms
+4. Updated credentials are persisted via `SaveCredentialFile`
+
+## Key Concepts
+
+### COSY Credentials
+- Encrypted credential format generated via RSA encryption of a random temp key
+- Core logic in `internal/auth/cosy_generate.go`
+- Used as the primary credential storage mechanism
+
+### Credential Manager
+- Central credential lifecycle manager (`internal/proxy/credentials.go`)
+- Tracks current state via `CredentialSnapshot` struct
+- Coordinates token validation, refresh scheduling, and persistence
+
+### Canonical Format
+- Used throughout the proxy layer for request/response translation
+- Core types defined in `internal/proxy/types.go`
+- Ensures consistent mapping between OpenAI and Lingma API shapes
+
+### Strategy Pattern
+- Applied to token refresh: `WSRefresher`, `MultiRefresher` in `internal/auth/refresh.go`
+- Enables pluggable refresh strategies selected based on runtime availability
+
 ## Build, Test, And Run Commands
 
 Run backend commands from the repository root unless noted otherwise.
@@ -45,8 +86,6 @@ Run these from the repository root.
 
 - Development mode on Windows: `.\dev.ps1`
 - Development mode on Linux/macOS: `./dev.sh`
-- Production-style build/run on Windows: `.\start.ps1`
-- Production-style build/run on Linux/macOS: `./start.sh`
 
 The Go service normally listens on port `8080`. The Vite dev server uses port `3000` and proxies `/v1` and `/admin` to `http://127.0.0.1:8080`.
 
@@ -97,7 +136,10 @@ The Go service normally listens on port `8080`. The Vite dev server uses port `3
 ## API And Runtime Notes
 
 - Public API routes include `/v1/models`, `/v1/chat/completions`, and `/v1/messages`.
-- Admin routes live under `/admin`.
+- Admin routes live under `/admin`, including:
+  - `/admin/status` — service health and runtime status
+  - `/admin/account` — account management
+  - `/admin/account/bootstrap` — authentication flow entry point
 - Admin authentication may use `Authorization: Bearer <admin_token>` or `X-Admin-Token: <admin_token>`.
 - Frontend dev requests to `/v1` and `/admin` are proxied by Vite to the backend.
 - The embedded production UI is served from `frontend-dist`, which is produced by the frontend build.

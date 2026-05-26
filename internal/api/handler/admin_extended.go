@@ -148,12 +148,39 @@ func (s *Server) HandleAdminDashboard(w http.ResponseWriter, r *http.Request) {
 	if rangeParam == "" {
 		rangeParam = "24h"
 	}
-	data, err := s.DB.GetDashboardData(r.Context(), rangeParam)
-	if err != nil {
-		response.WriteOpenAIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	data := s.getDashboardData(r.Context(), rangeParam)
 	response.WriteJSON(w, http.StatusOK, data)
+}
+
+func (s *Server) getDashboardData(ctx context.Context, rangeStr string) db.DashboardData {
+	if s.StoreExecutionLogs && s.DB != nil {
+		if data, err := s.DB.GetDashboardData(ctx, rangeStr); err == nil {
+			return data
+		}
+	}
+	data := db.DashboardData{
+		SuccessRateSeries: []db.TimeSeriesPoint{},
+		TokenSeries:       []db.TimeSeriesPoint{},
+		ModelDistribution: []db.ModelDistPoint{},
+	}
+	if s.RequestStats != nil {
+		hours := db.RangeToHours(rangeStr)
+		days := (hours + 23) / 24
+		if stats, err := s.RequestStats.GetDashboardStats(ctx, days); err == nil {
+			data.Stats = stats
+		}
+	}
+	if s.TokenStats != nil {
+		hours := db.RangeToHours(rangeStr)
+		days := (hours + 23) / 24
+		if days <= 0 {
+			days = 1
+		}
+		if tokens, err := s.TokenStats.GetTokensForWindow(ctx, days); err == nil {
+			data.Stats.TotalTokens = tokens
+		}
+	}
+	return data
 }
 
 func (s *Server) buildAdminOverview(r *http.Request) (adminOverviewResponse, error) {
@@ -192,10 +219,8 @@ func (s *Server) buildAdminOverview(r *http.Request) (adminOverviewResponse, err
 			overview.TokenStats["total"] = total
 		}
 	}
+	overview.Dashboard = s.getDashboardData(r.Context(), "24h")
 	if s.DB != nil {
-		if dashboard, err := s.DB.GetDashboardData(r.Context(), "24h"); err == nil {
-			overview.Dashboard = dashboard
-		}
 		recent, err := s.listAdminLogs(r.Context(), db.LogFilter{}, 1, overviewRecentRequestLimit)
 		if err == nil {
 			overview.RecentRequests = recent.Items
@@ -972,11 +997,7 @@ func (s *Server) HandleAdminStatsExport(w http.ResponseWriter, r *http.Request) 
 	if rangeParam == "" {
 		rangeParam = "24h"
 	}
-	data, err := s.DB.GetDashboardData(r.Context(), rangeParam)
-	if err != nil {
-		response.WriteOpenAIError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
+	data := s.getDashboardData(r.Context(), rangeParam)
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Disposition", "attachment; filename=stats.json")
 	json.NewEncoder(w).Encode(data)

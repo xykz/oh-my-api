@@ -102,6 +102,31 @@ func (ts *TokenStats) GetTokenStats(ctx context.Context) (today, week, total int
 	return today, week, total, nil
 }
 
+// GetTokensForWindow returns the token count for the last N days.
+func (ts *TokenStats) GetTokensForWindow(ctx context.Context, days int) (int, error) {
+	if days <= 0 {
+		days = 1
+	}
+	now := time.Now()
+	total := 0
+	for d := 0; d < days; d++ {
+		key := dailyKey(now.AddDate(0, 0, -d))
+		val, err := ts.client.Get(ctx, key).Result()
+		if err == redis.Nil {
+			continue
+		}
+		if err != nil {
+			return 0, err
+		}
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			return 0, fmt.Errorf("parse token value for %s: %w", key, err)
+		}
+		total += n
+	}
+	return total, nil
+}
+
 func dailyKey(t time.Time) string {
 	return tokenKeyPrefix + t.Format("2006-01-02")
 }

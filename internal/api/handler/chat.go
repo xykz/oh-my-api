@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/rizxfrog/oh-my-api/internal/api/model"
 	"github.com/rizxfrog/oh-my-api/internal/api/response"
@@ -322,6 +323,7 @@ func (s *Server) writeNonStreamResponse(
 	sessionCanonicalRequest proxy.CanonicalRequest,
 	traceID string,
 ) {
+	startTime := s.Deps.Now()
 	content, rawSSELines, promptTokens, completionTokens, totalTokens, err := collectSSEContentWithUsage(stream)
 	if err != nil {
 		response.WriteMappedError(writer, err)
@@ -357,6 +359,10 @@ func (s *Server) writeNonStreamResponse(
 	)
 	if s.TokenStats != nil {
 		_ = s.TokenStats.AddTokens(ctx, totalTokens)
+	}
+	if s.RequestStats != nil {
+		ttftMs := int(s.Deps.Now().Sub(startTime).Milliseconds())
+		_ = s.RequestStats.RecordRequest(ctx, true, ttftMs)
 	}
 
 	finishReason := "stop"
@@ -398,6 +404,8 @@ func (s *Server) streamChatResponse(
 	sessionCanonicalRequest proxy.CanonicalRequest,
 	traceID string,
 ) {
+	startTime := s.Deps.Now()
+	var firstTokenTime time.Time
 	flusher, ok := writer.(http.Flusher)
 	if !ok {
 		response.WriteOpenAIError(writer, http.StatusInternalServerError, "streaming unsupported")
@@ -478,6 +486,9 @@ func (s *Server) streamChatResponse(
 			return nil
 		}
 		if event.Content != "" {
+			if firstTokenTime.IsZero() {
+				firstTokenTime = s.Deps.Now()
+			}
 			for _, p := range pendingTCs {
 				if err := emitPending(p); err != nil {
 					return err
@@ -571,6 +582,10 @@ func (s *Server) streamChatResponse(
 	)
 	if s.TokenStats != nil {
 		_ = s.TokenStats.AddTokens(request.Context(), totalTokens)
+	}
+	if s.RequestStats != nil {
+		ttftMs := int(firstTokenTime.Sub(startTime).Milliseconds())
+		_ = s.RequestStats.RecordRequest(request.Context(), true, ttftMs)
 	}
 
 	finishReason := "stop"
