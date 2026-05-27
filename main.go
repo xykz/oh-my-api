@@ -15,7 +15,7 @@ import (
 
 	"github.com/rizxfrog/oh-my-api/internal/api/handler"
 	"github.com/rizxfrog/oh-my-api/internal/api/model"
-	"github.com/rizxfrog/oh-my-api/internal/api/router"
+	"github.com/rizxfrog/oh-my-api/internal/api/routes"
 	"github.com/rizxfrog/oh-my-api/internal/config"
 	"github.com/rizxfrog/oh-my-api/internal/db"
 	"github.com/rizxfrog/oh-my-api/internal/proxy"
@@ -162,7 +162,9 @@ func main() {
 		}
 	}
 
-	httpHandler := router.New(model.Dependencies{
+	codebuddyClient := proxy.NewCodeBuddyClient(cfg.CodeBuddy.BaseURL)
+
+	httpHandler := routes.New(model.Dependencies{
 		Credentials:        credentials,
 		Accounts:           accountStore,
 		Models:             models,
@@ -180,7 +182,8 @@ func main() {
 		FrontendFS:         frontendDist,
 		TokenStats:         tokenStats,
 		RequestStats:       requestStats,
-	}, store, bootstrapMgr)
+		CodeBuddyConfig:    cfg.CodeBuddy,
+	}, store, bootstrapMgr, codebuddyClient)
 
 	server := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),

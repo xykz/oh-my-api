@@ -1,0 +1,2 @@
+- [ ] 将 http://localhost:8080/admin/dashboard?range=24h 改为total
+- [ ] 将API前后端API协议重构为GraphQL，前端改为单一API接口，后端根据请求内容分发到不同的处理函数

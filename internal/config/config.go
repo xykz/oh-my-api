@@ -16,6 +16,7 @@ type Config struct {
 	Logging    LoggingConfig
 	Database   DatabaseConfig
 	Redis      RedisConfig
+	CodeBuddy  CodeBuddyConfig
 }
 
 type ServerConfig struct {
@@ -63,6 +64,11 @@ type RedisConfig struct {
 	DB       int
 }
 
+type CodeBuddyConfig struct {
+	BaseURL string
+	Models  []string
+}
+
 func Default() Config {
 	return Config{
 		Server: ServerConfig{
@@ -100,6 +106,9 @@ func Default() Config {
 			Addr:     "localhost:6379",
 			Password: "",
 			DB:       0,
+		},
+		CodeBuddy: CodeBuddyConfig{
+			BaseURL: "https://www.codebuddy.ai",
 		},
 	}
 }
@@ -236,6 +245,8 @@ func assignValue(cfg *Config, section, key, value string) error {
 		return assignDatabaseValue(&cfg.Database, key, value)
 	case "redis":
 		return assignRedisValue(&cfg.Redis, key, value)
+	case "codebuddy":
+		return assignCodeBuddyValue(&cfg.CodeBuddy, key, value)
 	default:
 		return fmt.Errorf("unknown section %q", section)
 	}
@@ -373,6 +384,29 @@ func assignRedisValue(cfg *RedisConfig, key, value string) error {
 		return fmt.Errorf("unknown redis key %q", key)
 	}
 	return nil
+}
+
+func assignCodeBuddyValue(cfg *CodeBuddyConfig, key, value string) error {
+	switch key {
+	case "base_url":
+		cfg.BaseURL = value
+	case "models":
+		cfg.Models = splitAndTrim(value, ",")
+	default:
+		return fmt.Errorf("unknown codebuddy key %q", key)
+	}
+	return nil
+}
+
+func splitAndTrim(s, sep string) []string {
+	parts := strings.Split(s, sep)
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if trimmed := strings.TrimSpace(p); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 func validateAccountConfig(cfg AccountConfig) error {

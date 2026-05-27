@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/rizxfrog/oh-my-api/internal/api/model"
 	"github.com/rizxfrog/oh-my-api/internal/db"
+	"github.com/rizxfrog/oh-my-api/internal/proxy"
 	"github.com/rizxfrog/oh-my-api/internal/redis"
 )
 
@@ -15,4 +16,6 @@ type Server struct {
 	Bootstrap          *BootstrapManager
 	TokenStats         *redis.TokenStats
 	RequestStats       *redis.RequestStats
+	CodeBuddyClient    *proxy.CodeBuddyClient
+	CodeBuddyRRIndex   uint64
 }

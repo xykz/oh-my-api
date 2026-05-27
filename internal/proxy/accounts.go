@@ -258,6 +258,11 @@ func validateAccountSnapshot(account AccountSnapshot) error {
 			return fmt.Errorf("%w: account %q missing access_token or cosy_key", ErrCredentialsUnavailable, account.ID)
 		}
 		return nil
+	case AccountRegionCodeBuddy:
+		if account.AccessToken == "" {
+			return fmt.Errorf("%w: account %q missing access_token", ErrCredentialsUnavailable, account.ID)
+		}
+		return nil
 	default:
 		return fmt.Errorf("%w: account %q unknown region %q", ErrCredentialsUnavailable, account.ID, account.Region)
 	}
@@ -287,6 +292,12 @@ func accountID(account StoredCredentialAccount) (string, error) {
 	if account.ID != "" {
 		return account.ID, nil
 	}
+	if account.Region == AccountRegionCodeBuddy {
+		if account.Auth.AccessToken == "" {
+			return "", fmt.Errorf("%w: codebuddy account missing access_token for generated id", ErrCredentialsUnavailable)
+		}
+		return generatedAccountID(account), nil
+	}
 	if account.Region == "" || account.Auth.UserID == "" || account.Auth.MachineID == "" {
 		return "", fmt.Errorf("%w: account missing stable identity for generated id", ErrCredentialsUnavailable)
 	}
@@ -294,10 +305,19 @@ func accountID(account StoredCredentialAccount) (string, error) {
 }
 
 func generatedAccountID(account StoredCredentialAccount) string {
-	parts := []string{
-		string(account.Region),
-		account.Auth.UserID,
-		account.Auth.MachineID,
+	var parts []string
+	if account.Region == AccountRegionCodeBuddy {
+		parts = []string{
+			string(account.Region),
+			account.Label,
+			account.Auth.AccessToken,
+		}
+	} else {
+		parts = []string{
+			string(account.Region),
+			account.Auth.UserID,
+			account.Auth.MachineID,
+		}
 	}
 	sum := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
 	return "acct-" + hex.EncodeToString(sum[:8])

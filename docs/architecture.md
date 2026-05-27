@@ -96,11 +96,22 @@ internal/
 |------|------|
 | **协议转换** | OpenAI Chat Completions ↔ Anthropic Messages ↔ 内部规范化 IR（`CanonicalRequest`） |
 | **会话管理** | 内存会话存储，TTL 驱逐，对话轮次合并 |
-| **多账号路由** | 从文件加载多账号凭据，按区域（中国/国际）过滤，轮询负载均衡 |
+| **多账号路由** | 从文件加载多账号凭据，按区域（中国/国际/CodeBuddy）过滤，轮询负载均衡 |
 | **区域适配器** | 可插拔的 `RegionAdapter` 接口，支持中国和国际灵码端点 |
 | **模型发现** | 从上游获取可用模型列表，解析别名，跟踪按模型可用的账户/区域 |
 | **SSE 流处理** | 上游 SSE 事件解析、Token 用量提取 |
 | **签名引擎** | 灵码请求签名（Cosy 版本） |
+
+### 账号 ID 生成策略
+
+账号 ID 由 `accountID()` 生成（`accounts.go`），采用 SHA256 哈希，前缀 `acct-`。不同区域使用不同的稳定标识字段：
+
+| 区域 | 哈希输入 | 说明 |
+|------|----------|------|
+| `china` / `international` | `region + user_id + machine_id` | Lingma 账号，要求 `user_id` 和 `machine_id` 均非空 |
+| `codebuddy` | `region + label + access_token` | CodeBuddy 账号，仅要求 `access_token` 非空；`label` 用于区分多账号 |
+
+相同 ID 的重复提交触发 upsert（覆盖更新），不会产生重复条目。
 
 ### proxy 拆分说明
 

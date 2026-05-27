@@ -1,41 +1,13 @@
-package router
+package routes
 
 import (
-	"context"
-	"embed"
-	"io/fs"
 	"net/http"
 	"strings"
-	"time"
-
-	"strconv"
 
 	"github.com/rizxfrog/oh-my-api/internal/api/handler"
-	"github.com/rizxfrog/oh-my-api/internal/api/model"
-	"github.com/rizxfrog/oh-my-api/internal/db"
-	"github.com/rizxfrog/oh-my-api/internal/middleware"
 )
 
-// New creates the HTTP handler with all routes registered.
-func New(deps model.Dependencies, store *db.Store, bootstrap *handler.BootstrapManager) http.Handler {
-	if deps.Now == nil {
-		deps.Now = time.Now
-	}
-
-	s := &handler.Server{
-		Deps:               deps,
-		DB:                 store,
-		StoreExecutionLogs: deps.StoreExecutionLogs,
-		Bootstrap:          bootstrap,
-		TokenStats:         deps.TokenStats,
-		RequestStats:       deps.RequestStats,
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/lingma/v1/chat/completions", s.HandleChatCompletions)
-	mux.HandleFunc("/lingma/v1/messages", s.HandleAnthropicMessages)
-	mux.HandleFunc("/lingma/v1/responses", s.HandleResponses)
-	mux.HandleFunc("/lingma/v1/models", s.HandleModels)
+func registerAdminRoutes(mux *http.ServeMux, s *handler.Server) {
 	mux.HandleFunc("/admin/status", s.HandleAdminStatus)
 	mux.HandleFunc("/admin/overview", s.HandleAdminOverview)
 	mux.HandleFunc("/admin/sessions", s.HandleAdminSessions)
@@ -98,39 +70,4 @@ func New(deps model.Dependencies, store *db.Store, bootstrap *handler.BootstrapM
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
-	if deps.FrontendFS != (embed.FS{}) {
-		subFS, err := fs.Sub(deps.FrontendFS, "frontend-dist")
-		if err == nil {
-			fileServer := http.FileServerFS(subFS)
-			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-				f, err := subFS.Open(strings.TrimPrefix(r.URL.Path, "/"))
-				if err == nil {
-					f.Close()
-					fileServer.ServeHTTP(w, r)
-					return
-				}
-				r.URL.Path = "/"
-				fileServer.ServeHTTP(w, r)
-			})
-		}
-	}
-
-	hdlr := http.Handler(mux)
-	if store != nil {
-		settings, _ := store.GetSettings(context.Background())
-		cfg := middleware.LoggingConfig{
-			StorageMode:    settings["storage_mode"],
-			TruncateLength: parseIntOr(settings["truncate_length"], 102400),
-		}
-		hdlr = middleware.Logging(store, cfg)(hdlr)
-	}
-	return hdlr
-}
-
-func parseIntOr(s string, def int) int {
-	if v, err := strconv.Atoi(s); err == nil {
-		return v
-	}
-	return def
 }

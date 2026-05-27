@@ -55,6 +55,7 @@ The repository implements a proxy that translates between OpenAI API format and 
    - Handles admin functions
    - Manages the bootstrap flow
    - Provides status endpoints
+   - Routes organized in `internal/api/routes/` (lingma, codebuddy, admin)
 
 4. **Model Layer** (`internal/models.go`):
    - Manages model information
@@ -76,6 +77,14 @@ The repository implements a proxy that translates between OpenAI API format and 
    - Tokens can be refreshed via WebSocket or remotely
    - Implemented in `internal/auth/refresh.go`
    - Uses multiple strategies (WSRefresher, MultiRefresher)
+
+4. **CodeBuddy Provider**:
+   - Third provider alongside Lingma China/International
+   - Uses `/codebuddy/v1/*` prefix for isolation
+   - HTTP client with CLI header impersonation
+   - Accounts stored in `credentials.json` with `region: "codebuddy"`
+   - Supports keyword replacement (Claude→CodeBuddy, Anthropic→Tencent)
+   - Found in `internal/proxy/codebuddy_client.go`
 
 ## Development Notes
 
@@ -168,13 +177,28 @@ Key auth configuration:
 - `credential.auth_file` - Path to credentials.json
 - `lingma.oauth_callback_addr` - Callback address for Lingma
 
+Key CodeBuddy configuration:
+- `codebuddy.base_url` - CodeBuddy API base URL (default: `https://www.codebuddy.ai`)
+- `codebuddy.models` - List of available models for CodeBuddy
+
 ## Key Endpoints
 
-- `/v1/models` - Model listing
-- `/v1/chat/completions` - Chat endpoint
+### Lingma Provider
+- `/lingma/v1/models` - Model listing
+- `/lingma/v1/chat/completions` - Chat endpoint
+- `/lingma/v1/responses` - Responses endpoint
+- `/lingma/v1/messages` - Anthropic Messages endpoint
+
+### CodeBuddy Provider
+- `/codebuddy/v1/chat/completions` - CodeBuddy chat endpoint
+- `/codebuddy/v1/models` - CodeBuddy models listing
+
+### Admin
 - `/admin/status` - Status endpoint
-- `/admin/account` - Account management
+- `/admin/account` - Account management (GET/POST)
 - `/admin/account/bootstrap` - Authentication flow endpoint
+- `/admin/account/bootstrap/submit` - Submit callback URL
+- `/admin/account/bootstrap/status` - Bootstrap status
 
 ## Key Testing Considerations
 

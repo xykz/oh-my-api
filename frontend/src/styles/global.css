@@ -1777,6 +1777,39 @@ tr:last-child td { border-bottom: none; }
   border-left: 3px solid var(--error);
 }
 
+/* Account tabs */
+.account-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--border);
+}
+
+.account-tab {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.account-tab:hover {
+  color: var(--text-primary);
+}
+
+.account-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
 .account-card-header,
 .account-table-header {
   display: flex;

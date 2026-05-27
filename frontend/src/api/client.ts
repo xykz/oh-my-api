@@ -80,6 +80,11 @@ export const testAccountConnection = (accountId?: string) => {
   const qs = accountId ? `?id=${encodeURIComponent(accountId)}` : '';
   return request<AccountTestResult>(`/admin/account/test${qs}`, { method: 'POST' });
 };
+export const addAccount = (body: object) =>
+  request<{ message: string }>('/admin/account', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 
 // Mappings
 export const getMappings = () => request<ModelMapping[]>('/admin/mappings');

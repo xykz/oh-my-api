@@ -85,6 +85,7 @@ type (
 const (
 	AccountRegionChina         = types.AccountRegionChina
 	AccountRegionInternational = types.AccountRegionInternational
+	AccountRegionCodeBuddy     = types.AccountRegionCodeBuddy
 )
 
 // ── Session types ───────────────────────────────────────────────

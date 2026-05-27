@@ -51,6 +51,7 @@ type ChatTransport interface {
 type AccountProvider interface {
 	Accounts(context.Context) ([]proxy.AccountSnapshot, error)
 	Summaries(context.Context) ([]proxy.AccountSummary, error)
+	UpsertAccount(context.Context, proxy.StoredCredentialAccount) error
 }
 
 type AccountBalancer interface {
@@ -95,6 +96,7 @@ type Dependencies struct {
 	FrontendFS         embed.FS
 	TokenStats         *redis.TokenStats
 	RequestStats       *redis.RequestStats
+	CodeBuddyConfig    config.CodeBuddyConfig
 }
 
 // ── OpenAI response types ────────────────────────────────────────

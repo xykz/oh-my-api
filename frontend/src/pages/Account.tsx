@@ -20,6 +20,7 @@ import {
   startBootstrap,
   submitBootstrapCallback,
   testAccountConnection,
+  addAccount,
 } from '../api/client';
 import { StatCard } from '../components/StatCard';
 import { Skeleton } from '../components/Skeleton';
@@ -45,6 +46,7 @@ const BOOTSTRAP_PHASES = [
 const REGION_LABEL: Record<AccountRegion, string> = {
   china: '国内版',
   international: '国际版',
+  codebuddy: 'CodeBuddy',
 };
 
 const ROUTING_LABEL: Record<string, string> = {
@@ -85,10 +87,10 @@ function Badge({ ok, label }: { ok: boolean; label: string }) {
 }
 
 function RegionBadge({ region }: { region?: AccountRegion | string }) {
-  const normalized = region === 'international' ? 'international' : 'china';
+  const normalized = region === 'international' ? 'international' : region === 'codebuddy' ? 'codebuddy' : 'china';
   return (
     <span className={`account-region-badge account-region-${normalized}`}>
-      {normalized === 'international' ? <Globe2 size={13} /> : <Server size={13} />}
+      {normalized === 'international' ? <Globe2 size={13} /> : normalized === 'codebuddy' ? <Zap size={13} /> : <Server size={13} />}
       {REGION_LABEL[normalized]}
     </span>
   );
@@ -130,6 +132,10 @@ export function Account() {
   const [remaining, setRemaining] = useState<string>('');
   const pollRef = useRef<ReturnType<typeof setInterval>>();
   const tickRef = useRef<ReturnType<typeof setInterval>>();
+  const [activeTab, setActiveTab] = useState<'china' | 'international' | 'codebuddy'>('china');
+  const [cbApiKey, setCbApiKey] = useState('');
+  const [cbLabel, setCbLabel] = useState('');
+  const [addingAccount, setAddingAccount] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -303,6 +309,24 @@ export function Account() {
   const showBootstrapAuthURL = Boolean(bootstrap?.auth_url && inFlight);
   const showManualCallbackInput = bootstrap?.status === 'awaiting_callback_url' && !waitingLingmaCache;
 
+  const handleAddCodeBuddy = async () => {
+    if (!cbApiKey.trim()) return;
+    setAddingAccount(true);
+    try {
+      await addAccount({
+        region: 'codebuddy',
+        label: cbLabel.trim() || 'CodeBuddy',
+        auth: { access_token: cbApiKey.trim() },
+      });
+      setCbApiKey('');
+      setCbLabel('');
+      await load();
+    } catch (e) {
+      // Error is handled by the request function
+    }
+    setAddingAccount(false);
+  };
+
   if (loading || !data) {
     return (
       <div>
@@ -315,11 +339,17 @@ export function Account() {
   }
 
   const accounts = data.accounts || [];
+  const filteredAccounts = accounts.filter(a => {
+    if (activeTab === 'codebuddy') return a.region === 'codebuddy';
+    if (activeTab === 'international') return a.region === 'international';
+    return a.region !== 'international' && a.region !== 'codebuddy';
+  });
   const counts = data.counts || {
     total: accounts.length,
     enabled: accounts.filter(item => item.enabled).length,
     china: accounts.filter(item => item.region === 'china').length,
     international: accounts.filter(item => item.region === 'international').length,
+    codebuddy: accounts.filter(item => item.region === 'codebuddy').length,
   };
   const routingMode = data.routing_mode || 'mixed';
   const loadBalance = data.load_balance || 'round_robin';
@@ -337,24 +367,28 @@ export function Account() {
           </div>
         </div>
         <div className="page-actions page-actions-wrap">
-          <button
-            className="btn btn-primary"
-            onClick={() => handleBootstrap('china')}
-            disabled={inFlight}
-            title="使用国内版 Lingma 登录并保存为中国区账号"
-          >
-            <Server size={16} />
-            登录国内版
-          </button>
-          <button
-            className="btn"
-            onClick={() => handleBootstrap('international')}
-            disabled={inFlight}
-            title="使用国际版 Lingma 登录。当前后端会在协议未配置时返回明确错误。"
-          >
-            <Globe2 size={16} />
-            登录国际版
-          </button>
+          {activeTab !== 'codebuddy' && (
+            <>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleBootstrap('china')}
+                disabled={inFlight}
+                title="使用国内版 Lingma 登录并保存为中国区账号"
+              >
+                <Server size={16} />
+                登录国内版
+              </button>
+              <button
+                className="btn"
+                onClick={() => handleBootstrap('international')}
+                disabled={inFlight}
+                title="使用国际版 Lingma 登录。当前后端会在协议未配置时返回明确错误。"
+              >
+                <Globe2 size={16} />
+                登录国际版
+              </button>
+            </>
+          )}
           <button className="btn" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw size={16} />
             {refreshing ? '读取中...' : '重新读取'}
@@ -362,12 +396,61 @@ export function Account() {
         </div>
       </div>
 
+      <div className="account-tabs">
+        <button
+          className={`account-tab ${activeTab === 'china' ? 'active' : ''}`}
+          onClick={() => setActiveTab('china')}
+        >
+          <Server size={16} /> 国内版
+        </button>
+        <button
+          className={`account-tab ${activeTab === 'international' ? 'active' : ''}`}
+          onClick={() => setActiveTab('international')}
+        >
+          <Globe2 size={16} /> 国际版
+        </button>
+        <button
+          className={`account-tab ${activeTab === 'codebuddy' ? 'active' : ''}`}
+          onClick={() => setActiveTab('codebuddy')}
+        >
+          <Zap size={16} /> CodeBuddy
+        </button>
+      </div>
+
       <div className="stat-grid account-stat-grid">
         <StatCard label="账号总数" value={counts.total || 0} icon={ShieldCheck} />
         <StatCard label="启用账号" value={counts.enabled || 0} icon={Radio} />
         <StatCard label="国内版" value={counts.china || 0} icon={Server} />
         <StatCard label="国际版" value={counts.international || 0} icon={Globe2} />
+        <StatCard label="CodeBuddy" value={counts.codebuddy || 0} icon={Zap} />
       </div>
+
+      {activeTab === 'codebuddy' && (
+        <div className="card">
+          <h4>添加 CodeBuddy 账号</h4>
+          <div className="account-callback-box">
+            <input
+              className="input"
+              placeholder="API Key (sk-...)"
+              value={cbApiKey}
+              onChange={e => setCbApiKey(e.target.value)}
+            />
+            <input
+              className="input"
+              placeholder="标签（可选）"
+              value={cbLabel}
+              onChange={e => setCbLabel(e.target.value)}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={handleAddCodeBuddy}
+              disabled={!cbApiKey.trim() || addingAccount}
+            >
+              {addingAccount ? '添加中...' : '添加账号'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {bootstrap && (
         <div className="card account-bootstrap-card">
@@ -471,7 +554,7 @@ export function Account() {
             {testingAccountId === '__default__' ? '测试中...' : '测试默认账号'}
           </button>
         </div>
-        {accounts.length > 0 ? (
+        {filteredAccounts.length > 0 ? (
           <table>
             <thead>
               <tr>
@@ -485,7 +568,7 @@ export function Account() {
               </tr>
             </thead>
             <tbody>
-              {accounts.map(account => (
+              {filteredAccounts.map(account => (
                 <tr key={account.id || `${account.region}-${account.user_id}`}>
                   <td>
                     <div className="account-name">{accountName(account)}</div>
@@ -501,7 +584,7 @@ export function Account() {
                     <div className="account-credential-badges">
                       {account.region === 'china' && <Badge ok={account.has_cosy_key} label="CosyKey" />}
                       {account.region === 'china' && <Badge ok={account.has_encrypt_info} label="EncryptInfo" />}
-                      {account.region === 'international' && <Badge ok={account.has_access_token} label="Access Token" />}
+                      {(account.region === 'international' || account.region === 'codebuddy') && <Badge ok={account.has_access_token} label="Access Token" />}
                       {account.region === 'international' && <Badge ok={account.has_refresh_token} label="Refresh Token" />}
                     </div>
                   </td>

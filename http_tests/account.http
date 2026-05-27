@@ -6,27 +6,23 @@
 @baseUrl = http://localhost:8080
 @adminToken =
 
-### ----------------------------------------------------------
+
 ### 获取账户列表及 Token 统计
-### ----------------------------------------------------------
 GET {{baseUrl}}/admin/account
 Authorization: Bearer {{adminToken}}
 
-### ----------------------------------------------------------
+
 ### 刷新账户凭据
-### ----------------------------------------------------------
 POST {{baseUrl}}/admin/account/refresh
 Authorization: Bearer {{adminToken}}
 
-### ----------------------------------------------------------
+
 ### 测试账户连通性
-### ----------------------------------------------------------
 POST {{baseUrl}}/admin/account/test
 Authorization: Bearer {{adminToken}}
 
-### ----------------------------------------------------------
+
 ### 启动账户引导 (OAuth) — method 可选: qrcode / browser
-### ----------------------------------------------------------
 POST {{baseUrl}}/admin/account/bootstrap
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -36,9 +32,8 @@ Content-Type: application/json
   "region": "china"
 }
 
-### ----------------------------------------------------------
+
 ### 启动账户引导 (浏览器方式, 国际区)
-### ----------------------------------------------------------
 POST {{baseUrl}}/admin/account/bootstrap
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
@@ -48,19 +43,45 @@ Content-Type: application/json
   "region": "international"
 }
 
-### ----------------------------------------------------------
+
 ### 查询引导状态 (替换为实际 session ID)
-### ----------------------------------------------------------
 GET {{baseUrl}}/admin/account/bootstrap/status?session=your-session-id
 Authorization: Bearer {{adminToken}}
 
-### ----------------------------------------------------------
+
 ### 提交引导结果 (替换为实际 session ID)
-### ----------------------------------------------------------
 POST {{baseUrl}}/admin/account/bootstrap/submit
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {
   "session": "your-session-id"
+}
+
+### 添加 CodeBuddy 账号 (access_token 必填)
+POST {{baseUrl}}/admin/account
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "region": "codebuddy",
+  "enabled": true,
+  "label": "my-codebuddy-account",
+  "auth": {
+    "access_token": "ck_fn7vyognuv40.qOxGvXMBn9rjfZo1lz19JbJzbfFCWxoErTD8X1rcEfQ"
+  }
+}
+
+
+### 添加 CodeBuddy 账号 (仅 access_token, 最简写法)
+POST {{baseUrl}}/admin/account
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "region": "codebuddy",
+  "enabled": true,
+  "auth": {
+    "access_token": "your-codebuddy-access-token"
+  }
 }

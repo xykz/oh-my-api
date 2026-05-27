@@ -347,10 +347,18 @@ func logLatencyMs(log db.RequestLog) int {
 }
 
 func (s *Server) HandleAdminAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		response.WriteMethodNotAllowed(w, http.MethodGet)
-		return
+	switch r.Method {
+	case http.MethodGet:
+		s.handleAdminAccountGet(w, r)
+	case http.MethodPost:
+		s.handleAdminAccountPost(w, r)
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (s *Server) handleAdminAccountGet(w http.ResponseWriter, r *http.Request) {
 	if !s.isAdminAuthorized(r) {
 		response.WriteOpenAIError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -432,12 +440,46 @@ func (s *Server) HandleAdminAccount(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleAdminAccountPost(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdminAuthorized(r) {
+		response.WriteOpenAIError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if s.Deps.Accounts == nil {
+		response.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "account store not configured"})
+		return
+	}
+	body := http.MaxBytesReader(w, r.Body, 1<<20)
+	defer body.Close()
+	var account proxy.StoredCredentialAccount
+	if err := json.NewDecoder(body).Decode(&account); err != nil {
+		response.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON: " + err.Error()})
+		return
+	}
+	if account.Region != proxy.AccountRegionCodeBuddy {
+		response.WriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "POST /admin/account currently only supports region=codebuddy; use bootstrap for lingma accounts",
+		})
+		return
+	}
+	if account.Auth.AccessToken == "" {
+		response.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "access_token is required"})
+		return
+	}
+	if err := s.Deps.Accounts.UpsertAccount(r.Context(), account); err != nil {
+		response.WriteMappedError(w, err)
+		return
+	}
+	response.WriteJSON(w, http.StatusOK, map[string]string{"message": "account added"})
+}
+
 func accountSummaryCounts(accounts []proxy.AccountSummary) map[string]int {
 	counts := map[string]int{
 		"total":         len(accounts),
 		"enabled":       0,
 		"china":         0,
 		"international": 0,
+		"codebuddy":     0,
 	}
 	for _, account := range accounts {
 		if account.Enabled {
@@ -448,6 +490,8 @@ func accountSummaryCounts(accounts []proxy.AccountSummary) map[string]int {
 			counts["china"]++
 		case proxy.AccountRegionInternational:
 			counts["international"]++
+		case proxy.AccountRegionCodeBuddy:
+			counts["codebuddy"]++
 		}
 	}
 	return counts

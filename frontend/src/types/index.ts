@@ -198,13 +198,14 @@ export interface AdminModelsResponse {
   status: ModelStatus;
 }
 
-export type AccountRegion = 'china' | 'international';
+export type AccountRegion = 'china' | 'international' | 'codebuddy';
 
 export interface AccountCounts {
   total: number;
   enabled: number;
   china: number;
   international: number;
+  codebuddy: number;
 }
 
 export interface AccountSummary {

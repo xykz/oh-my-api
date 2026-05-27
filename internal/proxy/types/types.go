@@ -201,6 +201,7 @@ type AccountRegion string
 const (
 	AccountRegionChina         AccountRegion = "china"
 	AccountRegionInternational AccountRegion = "international"
+	AccountRegionCodeBuddy     AccountRegion = "codebuddy"
 )
 
 type AccountSnapshot struct {

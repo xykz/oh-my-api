@@ -1,0 +1,41 @@
+###
+
+### 直连 CodeBuddy 上游 — 验证 access_token 是否有效
+### 替换 YOUR_TOKEN 为实际的 CodeBuddy access_token
+POST https://copilot.tencent.com/v2/chat/completions
+Authorization: Bearer ck_fn7vyognuv40.qOxGvXMBn9rjfZo1lz19JbJzbfFCWxoErTD8X1rcEfQ
+Content-Type: application/json
+X-API-Key: ck_fn7vyognuv40.qOxGvXMBn9rjfZo1lz19JbJzbfFCWxoErTD8X1rcEfQ
+X-IDE-Type: CLI
+X-IDE-Name: CLI
+X-IDE-Version: 1.0.7
+User-Agent: CLI/1.0.7 CodeBuddy/1.0.7
+
+{
+  "model": "deepseek-v4-pro",
+  "messages": [
+    {
+      "role": "user",
+      "content": "hi"
+    }
+  ],
+  "stream": true
+}
+
+####
+POST http://localhost:4100/v1/chat/completions
+Authorization: Bearer sk-kgJaHKAGOaj5padi7mTr4D41Os3QYbLsUGjIOCuAui2p5bBu
+Content-Type: application/json
+
+{
+  "model": "dashscope_qwen3_coder",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello"
+    }
+  ],
+  "stream": true
+}
+
+###

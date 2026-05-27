@@ -32,7 +32,7 @@ Content-Type: application/json
 >> {{responseFileOutputDir}}/chat-completion-stream-{{$timestamp}}.txt
 
 ### 聊天补全 (OpenAI Chat Completions, flattened)
-POST {{baseUrl}}/v1/chat/completions
+POST {{baseUrl}}/lingma/v1/chat/completions
 Authorization: Bearer {{authToken}}
 Content-Type: application/json
 
@@ -48,6 +48,23 @@ Content-Type: application/json
 }
 >> {{responseFileOutputDir}}/chat-completion-flat-{{$timestamp}}.json
 
+
+### 聊天补全 (OpenAI Chat Completions, flattened)
+POST {{baseUrl}}/codebuddy/v1/chat/completions
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "model": "{{modelId}}",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Hello, introduce yourself briefly."
+    }
+  ],
+  "stream": false
+}
+>> {{responseFileOutputDir}}/chat-completion-flat-{{$timestamp}}.json
 
 ### 聊天补全 (multi-turn, with system prompt, streaming)
 POST {{baseUrl}}/v1/chat/completions

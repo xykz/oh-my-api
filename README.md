@@ -1,6 +1,6 @@
 # lingma2api
 
-`lingma2api` 是一个最小 OpenAI 兼容代理，对外暴露 `/v1/models`、`/v1/chat/completions`、`/v1/responses` 与 `/v1/messages`，对内复用 Lingma 远端 HTTP/SSE 契约。
+`lingma2api` 是一个最小 OpenAI 兼容代理，对外暴露 `/v1/models`、`/v1/chat/completions`、`/v1/responses`、`/v1/messages` 以及 `/codebuddy/v1/chat/completions`，对内复用 Lingma 远端 HTTP/SSE 契约，支持 Lingma 和 CodeBuddy 两种 Provider。
 
 ## 启动
 
@@ -11,9 +11,11 @@ go run . -config ./config.yaml
 启动后访问：
 
 - 控制台：`http://<server>:8080`
-- OpenAI Chat Completions：`http://<server>:8080/v1/chat/completions`
-- OpenAI Responses：`http://<server>:8080/v1/responses`
-- Anthropic Messages：`http://<server>:8080/v1/messages`
+- OpenAI Chat Completions（Lingma）：`http://<server>:8080/lingma/v1/chat/completions`
+- OpenAI Responses（Lingma）：`http://<server>:8080/lingma/v1/responses`
+- Anthropic Messages（Lingma）：`http://<server>:8080/lingma/v1/messages`
+- CodeBuddy Chat Completions：`http://<server>:8080/codebuddy/v1/chat/completions`
+- CodeBuddy Models：`http://<server>:8080/codebuddy/v1/models`
 
 默认配置会监听 `0.0.0.0:8080`，适合服务器部署。
 
@@ -32,13 +34,25 @@ chmod +x ./dev.sh
 
 ## 当前能力
 
-- `GET /v1/models`
-- `POST /v1/chat/completions`
-- `POST /v1/responses`
-- `POST /v1/messages`
+### Lingma Provider
+- `GET /lingma/v1/models`
+- `POST /lingma/v1/chat/completions`
+- `POST /lingma/v1/responses`
+- `POST /lingma/v1/messages`
 - `stream=true` 与 `stream=false`
+
+### CodeBuddy Provider
+- `POST /codebuddy/v1/chat/completions`
+- `GET /codebuddy/v1/models`
+- 支持 `stream=true` 和 `stream=false`
+- 自动关键词替换（Claude→CodeBuddy，Anthropic→Tencent）
+- CLI 头部伪装（X-IDE-Type: CLI）
+- 工具调用 ID 转换（`tooluse_xxx` → `call_xxx`）
+
+### Admin 接口
 - `GET /admin/status`
 - `GET /admin/account`
+- `POST /admin/account`（创建 CodeBuddy 账号）
 - `POST /admin/account/bootstrap`
 - `POST /admin/account/bootstrap/submit`
 - `GET /admin/account/bootstrap/status`
@@ -80,7 +94,68 @@ lingma:
   oauth_callback_addr: "127.0.0.1:37510"
 ```
 
-表示“用户浏览器登录完成后要跳转到的本地回调地址”，用于生成 Lingma 登录链接；它不是服务器实际监听的端口。
+表示”用户浏览器登录完成后要跳转到的本地回调地址”，用于生成 Lingma 登录链接；它不是服务器实际监听的端口。
+
+## CodeBuddy Provider
+
+支持将 CodeBuddy 作为第三种 Provider 接入，使用独立的端点前缀 `/codebuddy/v1/*`。
+
+### 配置
+
+在 `config.yaml` 中添加：
+
+```yaml
+codebuddy:
+  base_url: “https://www.codebuddy.ai”
+  models:
+    - “claude-sonnet-4-20250514”
+    - “claude-3-7-sonnet-20250219”
+```
+
+### 添加账号
+
+通过管理界面添加 CodeBuddy 账号：
+1. 打开管理界面的”账号管理”页
+2. 切换到”CodeBuddy”选项卡
+3. 输入 API Key（`sk-...`）和可选标签
+4. 点击”添加账号”
+
+或通过 API：
+
+```bash
+curl -X POST http://<server>:8080/admin/account \
+  -H “Content-Type: application/json” \
+  -H “X-Admin-Token: <admin_token>” \
+  -d '{
+    “region”: “codebuddy”,
+    “label”: “My CodeBuddy Account”,
+    “auth”: {
+      “access_token”: “sk-xxx”
+    }
+  }'
+```
+
+### 使用
+
+```bash
+curl -N http://<server>:8080/codebuddy/v1/chat/completions \
+  -H “Content-Type: application/json” \
+  -d '{
+    “model”: “claude-sonnet-4-20250514”,
+    “stream”: true,
+    “messages”: [
+      {“role”: “user”, “content”: “Hello”}
+    ]
+  }'
+```
+
+### 特性
+
+- **CLI 头部伪装**：使用特定的 CLI 头部信息（X-IDE-Type: CLI，User-Agent: CLI/1.0.7）
+- **关键词替换**：自动替换系统消息中的 Claude/Anthropic 引用
+- **强制流式**：所有上游请求使用 `stream: true`
+- **工具调用 ID 转换**：`tooluse_xxx` → `call_xxx`
+- **多账号支持**：支持多个 CodeBuddy 账号，使用轮询策略选择
 
 ## 认证文件
 
