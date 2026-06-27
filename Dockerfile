@@ -12,7 +12,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-COPY --from=frontend-builder /app/frontend/dist /app/frontend-dist
+COPY --from=frontend-builder /app/frontend-dist /app/frontend-dist
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/lingma2api .
 
 # Stage 3: Runtime
